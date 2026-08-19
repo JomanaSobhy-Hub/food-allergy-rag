@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TrustBite — Food Allergy Assistant</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;700;800;900&family=Tajawal:wght@400;500;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="style.css">
+<style>
+  /* Layout grid for the 3-column dashboard */
+  .app-layout {
+    display: grid;
+    grid-template-columns: 260px 1fr 300px;
+    height: 100vh;
+    overflow: hidden;
+  }
+  @media (max-width: 1100px) {
+    .app-layout { grid-template-columns: 220px 1fr; }
+    .right-panel { display: none; }
+  }
+  @media (max-width: 768px) {
+    .app-layout { grid-template-columns: 1fr; }
+    .left-sidebar { display: none; position: fixed; inset: 0; z-index: 50; width: 280px; }
+    .left-sidebar.open { display: flex; }
+  }
+
+  .left-sidebar {
+    background: var(--dk-surface);
+    border-left: 1px solid var(--dk-border);
+    display: flex;
+    flex-direction: column;
+    padding: 20px 16px;
+    overflow-y: auto;
+  }
+  [dir="ltr"] .left-sidebar { border-left: none; border-right: 1px solid var(--dk-border); }
+
+  .main-chat {
+    display: flex;
+    flex-direction: column;
+    background: var(--dk-bg);
+    overflow: hidden;
+  }
+
+  .right-panel {
+    background: var(--dk-surface);
+    border-right: 1px solid var(--dk-border);
+    padding: 20px 16px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  [dir="ltr"] .right-panel { border-right: none; border-left: 1px solid var(--dk-border); }
+
+  .chat-scroll {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+  @media (max-width: 640px) {
+    .chat-scroll { padding: 16px; }
+  }
+
+  .top-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 24px;
+    border-bottom: 1px solid var(--dk-border-soft);
+    background: var(--dk-surface);
+  }
+
+  .user-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-weight: 700;
+    font-size: 13px;
+    flex-shrink: 0;
+  }
+
+  .ai-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--primary-light);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--primary);
+    flex-shrink: 0;
+  }
+
+  .mobile-menu-btn {
+    display: none;
+    background: transparent;
+    border: none;
+    color: var(--dk-text);
+    cursor: pointer;
+    padding: 4px;
+  }
+  @media (max-width: 768px) {
+    .mobile-menu-btn { display: block; }
+  }
+
+  .overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    z-index: 40;
+  }
+  .overlay.show { display: block; }
+</style>
+</head>
+<body class="min-h-screen">
+
+<div class="app-layout">
+
+  <!-- ========== LEFT SIDEBAR ========== -->
+  <aside class="left-sidebar" id="leftSidebar">
+    <!-- Logo -->
+    <a href="dashboard.html" class="flex items-center gap-2.5 mb-6 px-1">
+      <span class="w-8 h-8 rounded-lg flex items-center justify-center" style="background:linear-gradient(135deg, var(--primary), var(--primary-dark))">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 2 4 6v6c0 5 3.4 8.7 8 10 4.6-1.3 8-5 8-10V6l-8-4Z" stroke="#fff" stroke-width="1.8" stroke-linejoin="round"/><path d="m8.5 12 2.3 2.3L16 9" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </span>
+      <span class="font-display font-extrabold text-base" style="color:var(--dk-text)">TrustBite</span>
+    </a>
+
+    <!-- Main Nav -->
+    <nav class="space-y-1 mb-6">
+      <button class="nav-item is-active">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M4 5h16v11H8l-4 4V5Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>
+        <span data-ar="AI Chat" data-en="AI Chat">AI Chat</span>
+      </button>
+      <button class="nav-item">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 6v12M6 12h12" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+        <span data-ar="المصادر" data-en="Sources">المصادر</span>
+      </button>
+      <button class="nav-item">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M5 3h9l5 5v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M8 12h8M8 16h8M8 8h3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        <span data-ar="معلومات المستند" data-en="Document Info">معلومات المستند</span>
+      </button>
+      <button class="nav-item">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.6"/><path d="M12 8v8M8 12h8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        <span data-ar="عن التطبيق" data-en="About">عن التطبيق</span>
+      </button>
+      <a href="settings.html" class="nav-item">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.7"/><path d="M19 12a7 7 0 0 0-.1-1.2l2-1.5-2-3.4-2.3.9a7 7 0 0 0-2-1.2L14.2 3H9.8l-.4 2.6a7 7 0 0 0-2 1.2l-2.3-.9-2 3.4 2 1.5a7 7 0 0 0 0 2.4l-2 1.5 2 3.4 2.3-.9a7 7 0 0 0 2 1.2l.4 2.6h4.4l.4-2.6a7 7 0 0 0 2-1.2l2.3.9 2-3.4-2-1.5c.1-.4.1-.8.1-1.2Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+        <span data-ar="الإعدادات" data-en="Settings">الإعدادات</span>
+      </a>
+    </nav>
+
+    <!-- Suggested Questions -->
+    <div class="mb-4">
+      <p class="dk-section-label mb-3 px-1" data-ar="أسئلة مقترحة" data-en="Suggested Questions">أسئلة مقترحة</p>
+      <div class="px-1">
+        <button class="sq-pill" data-ar="ما هي أعراض حساسية الطعام؟" data-en="What are the symptoms of food allergy?">ما هي أعراض حساسية الطعام؟</button>
+        <button class="sq-pill" data-ar="ما هي المعلومات التي يجب جمعها؟" data-en="What information should be collected?">ما هي المعلومات التي يجب جمعها؟</button>
+        <button class="sq-pill" data-ar="ما هي العوامل التي يجب مراعاتها؟" data-en="What factors should be considered?">ما هي العوامل التي يجب مراعاتها؟</button>
+        <button class="sq-pill" data-ar="ما هي العلاجات السابقة؟" data-en="What previous treatments should be considered?">ما هي العلاجات السابقة؟</button>
+        <button class="sq-pill" data-ar="كيف يتم تشخيص حساسية الطعام؟" data-en="How is food allergy diagnosed?">كيف يتم تشخيص حساسية الطعام؟</button>
+      </div>
+    </div>
+
+    <div class="flex-1"></div>
+
+    <!-- Source Details -->
+    <div class="source-bar mt-2">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style="color:var(--primary); flex-shrink:0"><path d="M5 3h9l5 5v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M8 12h8M8 16h5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      <div>
+        <p class="text-xs font-bold" style="color:var(--dk-text)" data-ar="تفاصيل المصدر" data-en="Source Details">تفاصيل المصدر</p>
+        <p class="text-xs mt-0.5" style="color:var(--dk-text-faint)" data-ar="الصفحة 21، الأسطر 24-39" data-en="Page 21, Lines 24-39">الصفحة 21، الأسطر 24-39</p>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ========== MAIN CHAT AREA ========== -->
+  <div class="main-chat">
+    <!-- Top Bar -->
+    <div class="top-bar">
+      <div class="flex items-center gap-3">
+        <button class="mobile-menu-btn" id="menuBtn" aria-label="menu">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </button>
+        <div class="flex items-center gap-2.5">
+          <span class="w-8 h-8 rounded-lg flex items-center justify-center" style="background:linear-gradient(135deg, var(--primary), var(--primary-dark))">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 2 4 6v6c0 5 3.4 8.7 8 10 4.6-1.3 8-5 8-10V6l-8-4Z" stroke="#fff" stroke-width="1.8" stroke-linejoin="round"/></svg>
+          </span>
+          <div>
+            <h1 class="font-display font-bold text-sm" style="color:var(--dk-text)" data-ar="مساعد حساسية الطعام" data-en="Food Allergy Assistant">مساعد حساسية الطعام</h1>
+            <p class="text-xs" style="color:var(--dk-text-faint)" data-ar="إجابات مبنية على دليل NICE 116" data-en="Evidence-based answers from NICE Guideline 116">إجابات مبنية على دليل NICE 116</p>
+          </div>
+        </div>
+      </div>
+      <div class="flex items-center gap-3">
+        <button class="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-bold" style="background:var(--primary); color:#fff; border:none; cursor:pointer;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          <span data-ar="محادثة جديدة" data-en="New Chat">محادثة جديدة</span>
+        </button>
+        <div class="lang-toggle">
+          <button data-lang="ar" onclick="setLang('ar')">AR</button>
+          <button data-lang="en" onclick="setLang('en')">EN</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Chat Messages -->
+    <div class="chat-scroll" id="chatScroll">
+
+      <!-- User message 1 -->
+      <div class="flex justify-end">
+        <div class="flex items-end gap-2">
+          <div class="chat-bubble-user" data-ar="ما هي أعراض حساسية الطعام؟" data-en="What are the symptoms of food allergy?">ما هي أعراض حساسية الطعام؟</div>
+          <span class="user-avatar">ر</span>
+        </div>
+      </div>
+
+      <!-- AI Answer -->
+      <div class="flex items-start gap-2.5">
+        <div class="ai-avatar">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 2 4 6v6c0 5 3.4 8.7 8 10 4.6-1.3 8-5 8-10V6l-8-4Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+        </div>
+        <div class="chat-bubble-assistant">
+          <div class="answer-header">
+            <span class="font-display font-bold text-sm" style="color:var(--primary)" data-ar="إجابة" data-en="Answer">إجابة</span>
+          </div>
+          <div class="answer-body" data-ar="يمكن أن تسبب حساسية الطعام مجموعة متنوعة من الأعراض. قد تشمل أعراض الجهاز الهضمي مثل القيء والإسهال، وأعراض الجلد مثل الأكزيما، وأعراض الجهاز التنفسي مثل الصفير والسعال." data-en="Food allergy can cause a range of symptoms. These may include gastrointestinal symptoms such as vomiting and diarrhoea, skin symptoms such as eczema, and respiratory symptoms such as wheezing and coughing.">
+            يمكن أن تسبب حساسية الطعام مجموعة متنوعة من الأعراض. قد تشمل أعراض الجهاز الهضمي مثل القيء والإسهال، وأعراض الجلد مثل الأكزيما، وأعراض الجهاز التنفسي مثل الصفير والسعال.
+          </div>
+          <div class="evidence-box">
+            <p class="text-xs font-bold mb-1" style="color:var(--primary)" data-ar="الدليل" data-en="Evidence">الدليل</p>
+            <p class="text-xs" style="color:var(--dk-text-soft)" data-ar="قد تترافق حساسية الطعام مع أعراض الجهاز الهضمي مثل القيء والإسهال، وأعراض الجلد مثل الأكزيما، وأعراض الجهاز التنفسي مثل الصفير والسعال." data-en="Food allergy may be associated with gastrointestinal symptoms such as vomiting and diarrhoea, skin symptoms such as eczema, and respiratory symptoms such as wheezing and coughing.">قد تترافق حساسية الطعام مع أعراض الجهاز الهضمي مثل القيء والإسهال، وأعراض الجلد مثل الأكزيما، وأعراض الجهاز التنفسي مثل الصفير والسعال.</p>
+          </div>
+          <div class="reference-box flex items-center gap-2">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style="color:var(--dk-text-faint)"><path d="M5 3h9l5 5v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+            <span data-ar="الصفحة 21، الأسطر 24-39" data-en="Page 21, Lines 24-39">الصفحة 21، الأسطر 24-39</span>
+            <span class="mr-auto text-xs" style="color:var(--dk-text-faint)">10:30 AM</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- User message 2 -->
+      <div class="flex justify-end">
+        <div class="flex items-end gap-2">
+          <div class="chat-bubble-user" data-ar="ما هو أفضل علاج لحساسية الطعام؟" data-en="What is the best treatment for food allergy?">ما هو أفضل علاج لحساسية الطعام؟</div>
+          <span class="user-avatar">ر</span>
+        </div>
+      </div>
+
+      <!-- Not Found Answer -->
+      <div class="flex items-start gap-2.5">
+        <div class="ai-avatar">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 2 4 6v6c0 5 3.4 8.7 8 10 4.6-1.3 8-5 8-10V6l-8-4Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+        </div>
+        <div class="chat-bubble-notfound">
+          <div class="nf-header">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style="color:var(--caution)"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18A2 2 0 0 0 3.5 21h17a2 2 0 0 0 1.7-3.1L13.7 3.9a2 2 0 0 0-3.4 0Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span class="font-display font-bold text-sm" style="color:var(--caution)" data-ar="لم يتم العثور على الإجابة في المستند المقدم." data-en="The answer was not found in the provided document.">لم يتم العثور على الإجابة في المستند المقدم.</span>
+          </div>
+          <div class="nf-body" data-ar="هذا يعني أن المعلومات غير متوفرة في الدليل السريري NICE 116." data-en="This means the information is not available in the NICE Clinical Guideline 116.">
+            هذا يعني أن المعلومات غير متوفرة في الدليل السريري NICE 116.
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Bottom Input Area -->
+    <div class="px-6 pb-4 pt-2" style="background:var(--dk-bg)">
+      <div class="tip-box mb-3">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style="color:var(--primary); flex-shrink:0; margin-top:2px"><path d="M12 2a7 7 0 0 1 7 7c0 5.2-3.7 9.7-7 11.3C8.7 18.7 5 14.2 5 9a7 7 0 0 1 7-7Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="12" cy="9" r="1.5" fill="currentColor"/><path d="M12 12v4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        <p class="text-xs" style="color:var(--dk-text-soft)" data-ar="الإجابات مبنية فقط على الدليل السريري NICE 116. هذا المساعد يستخدم الذكاء الاصطناعي للإجابة على الأسئلة بناءً على المستند المقدم. لا يقدم استشارات طبية." data-en="Answers are based only on the NICE Clinical Guideline 116. This assistant uses AI to answer questions based on the provided document. It does not provide medical advice.">الإجابات مبنية فقط على الدليل السريري NICE 116. هذا المساعد يستخدم الذكاء الاصطناعي للإجابة على الأسئلة بناءً على المستند المقدم. لا يقدم استشارات طبية.</p>
+      </div>
+      <div class="chat-input-wrap">
+        <input type="text" data-ar-ph="اسأل سؤالاً عن حساسية الطعام..." data-en-ph="Ask a question about food allergy..." placeholder="اسأل سؤالاً عن حساسية الطعام...">
+        <button class="send" aria-label="send">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4 20-7Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== RIGHT PANEL ========== -->
+  <aside class="right-panel">
+
+    <!-- Document Information -->
+    <div class="panel-card">
+      <h4 data-ar="معلومات المستند" data-en="Document Information">معلومات المستند</h4>
+      <div class="flex items-start gap-3 mb-3">
+        <div class="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style="background:rgba(239,68,68,0.12)">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M5 3h9l5 5v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z" stroke="#EF4444" stroke-width="1.6" stroke-linejoin="round"/><path d="M8 12h8M8 16h5" stroke="#EF4444" stroke-width="1.6" stroke-linecap="round"/></svg>
+        </div>
+        <div>
+          <p class="text-xs font-bold" style="color:var(--dk-text)" data-ar="NICE Clinical Guideline 116" data-en="NICE Clinical Guideline 116">NICE Clinical Guideline 116</p>
+          <p class="text-xs mt-0.5" style="color:var(--dk-text-faint)" data-ar="حساسية الطعام في الأطفال والشباب" data-en="Food Allergy in Children and Young People">حساسية الطعام في الأطفال والشباب</p>
+        </div>
+      </div>
+      <div class="space-y-2">
+        <div class="flex justify-between text-xs">
+          <span style="color:var(--dk-text-faint)" data-ar="الصفحات" data-en="Pages">الصفحات</span>
+          <span style="color:var(--dk-text)" class="font-bold">73</span>
+        </div>
+        <div class="flex justify-between text-xs">
+          <span style="color:var(--dk-text-faint)" data-ar="الأجزاء" data-en="Chunks">الأجزاء</span>
+          <span style="color:var(--dk-text)" class="font-bold">210</span>
+        </div>
+        <div class="flex justify-between text-xs">
+          <span style="color:var(--dk-text-faint)" data-ar="نموذج التضمين" data-en="Embedding Model">نموذج التضمين</span>
+          <span style="color:var(--dk-text)" class="font-bold">all-MiniLM-L6-v2</span>
+        </div>
+        <div class="flex justify-between text-xs">
+          <span style="color:var(--dk-text-faint)" data-ar="آخر تحديث" data-en="Last Updated">آخر تحديث</span>
+          <span style="color:var(--dk-text)" class="font-bold">May 2024</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Evidence Relevance -->
+    <div class="panel-card">
+      <h4 data-ar="مدى صلة الدليل" data-en="Evidence Relevance">مدى صلة الدليل</h4>
+      <div class="flex items-center gap-4">
+        <div class="relative">
+          <svg class="progress-ring" viewBox="0 0 60 60">
+            <circle class="progress-ring-bg" cx="30" cy="30" r="26" fill="none" stroke-width="5"/>
+            <circle class="progress-ring-fill" cx="30" cy="30" r="26" fill="none" stroke-width="5" stroke-dasharray="163.36" stroke-dashoffset="32.67"/>
+          </svg>
+          <span class="absolute inset-0 flex items-center justify-center font-display font-extrabold text-sm" style="color:var(--primary)">80%</span>
+        </div>
+        <div>
+          <p class="text-xs font-bold" style="color:var(--dk-text)" data-ar="صلة عالية بالسؤال" data-en="High relevance">صلة عالية بالسؤال</p>
+          <div class="flex items-center gap-1 mt-1">
+            <span class="w-2 h-2 rounded-full" style="background:var(--primary)"></span>
+            <span class="w-2 h-2 rounded-full" style="background:var(--primary)"></span>
+            <span class="w-2 h-2 rounded-full" style="background:var(--primary)"></span>
+            <span class="w-2 h-2 rounded-full" style="background:var(--primary)"></span>
+            <span class="w-2 h-2 rounded-full" style="background:var(--dk-border)"></span>
+          </div>
+          <p class="text-xs mt-1" style="color:var(--dk-text-faint)">Retrieval score: 0.8668</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Chat History -->
+    <div class="panel-card">
+      <h4 data-ar="سجل المحادثات" data-en="Chat History">سجل المحادثات</h4>
+      <div class="mb-2">
+        <p class="text-xs font-bold mb-2" style="color:var(--dk-text-faint)" data-ar="اليوم" data-en="Today">اليوم</p>
+        <div class="history-item">
+          <span data-ar="ما هي أعراض حساسية الطعام؟" data-en="What are the symptoms of food allergy?">ما هي أعراض حساسية الطعام؟</span>
+          <span class="time">10:30 AM</span>
+        </div>
+        <div class="history-item">
+          <span data-ar="ما هو أفضل علاج لحساسية الطعام؟" data-en="What is the best treatment for food allergy?">ما هو أفضل علاج لحساسية الطعام؟</span>
+          <span class="time">10:31 AM</span>
+        </div>
+        <div class="history-item">
+          <span data-ar="ما هي الأطعمة الأكثر احتمالاً للتسبب في الحساسية؟" data-en="What foods are most likely to cause allergy?">ما هي الأطعمة الأكثر احتمالاً للتسبب في الحساسية؟</span>
+          <span class="time">10:28 AM</span>
+        </div>
+      </div>
+      <button class="w-full text-center text-xs font-bold py-2 rounded-lg mt-2" style="color:var(--alert); background:rgba(239,68,68,0.08); border:1px solid rgba(239,68,68,0.15); cursor:pointer;" data-ar="مسح السجل" data-en="Clear History">مسح السجل</button>
+    </div>
+
+    <!-- Source Preview -->
+    <div class="panel-card flex-1">
+      <h4 data-ar="معاينة المصدر" data-en="Source Preview">معاينة المصدر</h4>
+      <div class="rounded-lg p-3 mb-3" style="background:var(--dk-surface-2); border:1px solid var(--dk-border)">
+        <p class="text-xs leading-relaxed" style="color:var(--dk-text-soft)" data-ar="قد تترافق حساسية الطعام مع أعراض الجهاز الهضمي مثل القيء والإسهال، وأعراض الجلد مثل الأكزيما، وأعراض الجهاز التنفسي مثل الصفير والسعال. قد تشمل الأعراض الأخرى تورم الشفاه أو الوجه أو العينين، وفي الحالات الشديدة، الصدمة التأقية." data-en="Food allergy may be associated with gastrointestinal symptoms such as vomiting and diarrhoea, skin symptoms such as eczema, and respiratory symptoms such as wheezing and coughing. Other symptoms may include swelling of the lips, face or eyes, and in severe cases, anaphylaxis.">
+          قد تترافق حساسية الطعام مع أعراض الجهاز الهضمي مثل القيء والإسهال، وأعراض الجلد مثل الأكزيما، وأعراض الجهاز التنفسي مثل الصفير والسعال. قد تشمل الأعراض الأخرى تورم الشفاه أو الوجه أو العينين، وفي الحالات الشديدة، الصدمة التأقية.
+        </p>
+      </div>
+      <button class="w-full flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-bold" style="background:var(--dk-surface-2); color:var(--dk-text); border:1px solid var(--dk-border); cursor:pointer;" data-ar="فتح PDF" data-en="Open in PDF">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M5 3h9l5 5v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+        <span data-ar="فتح في PDF" data-en="Open in PDF">فتح في PDF</span>
+      </button>
+    </div>
+  </aside>
+</div>
+
+<!-- Mobile Overlay -->
+<div class="overlay" id="overlay"></div>
+
+<script src="lang.js"></script>
+<script>
+  // Mobile sidebar toggle
+  const sidebar = document.getElementById('leftSidebar');
+  const overlay = document.getElementById('overlay');
+  const menuBtn = document.getElementById('menuBtn');
+
+  function openMenu() {
+    sidebar.classList.add('open');
+    overlay.classList.add('show');
+  }
+  function closeMenu() {
+    sidebar.classList.remove('open');
+    overlay.classList.remove('show');
+  }
+
+  if (menuBtn) menuBtn.addEventListener('click', openMenu);
+  overlay.addEventListener('click', closeMenu);
+
+  // Auto-scroll to bottom
+  const chatScroll = document.getElementById('chatScroll');
+  if (chatScroll) chatScroll.scrollTop = chatScroll.scrollHeight;
+</script>
+</body>
+</html>
